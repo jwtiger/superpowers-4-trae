@@ -491,5 +491,5 @@ A: 检查：
 
 - [Superpowers GitHub 仓库](https://github.com/obra/superpowers)
 - [Superpowers 中文指南](./SUPERPOWERS-GUIDE-CN.md)
-- [Subagent-Driven Development 技能文档](../../skills/subagent-driven-development/SKILL.md)
-- [Using Superpowers 技能文档](../../skills/using-superpowers/SKILL.md)
+- [Subagent-Driven Development 技能文档](https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md)
+- [Using Superpowers 技能文档](https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md)
