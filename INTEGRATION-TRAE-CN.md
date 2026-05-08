@@ -1,359 +1,495 @@
-# KYT Platform API 接口文档
+# Superpowers 与 Trae 集成指南
 
-## 服务信息
+本文档说明如何将 Superpowers 项目集成到 Trae IDE 中，使其具备完整的技能系统和子代理能力。
 
-- **服务名称**: kyt-web-app
-- **服务地址**: `http://kyt-web-app.  :10206`
-- **协议**: HTTP REST
-- **认证方式**: 无需认证（内部服务调用）
-- **Content-Type**: application/json
+## 目录
+
+1. [下载 Superpowers 源码](#1-下载-superpowers-源码)
+2. [复制 Skills 到 Trae](#2-复制-skills-到-trae)
+3. [创建 SubAgents](#3-创建-subagents)
+4. [配置默认提示词](#4-配置默认提示词)
 
 ---
 
-## 接口列表
+## 1. 下载 Superpowers 源码
 
-### 接口 1: 地址风险评分
+### 方式一：通过 Git Clone（推荐）
 
-**路径**: POST `/kyt-platform/internal/agent/address/risk`
+```bash
+# 克隆仓库到本地
+git clone https://github.com/obra/superpowers.git
 
-**说明**: 获取指定地址的风险评分结果，包含拓扑图分析、标签风险、行为风险等综合评估
-
-**请求参数**:
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| address | string | 是 | 钱包地址 |
-| platform | string | 是 | 链平台 (ETH, BSC, TRON, MATIC, ARBITRUM, OPTIMISM, AVAX, SOL, LINEA, BASE, SCROLL, ZKSYNC, GNOSIS, KLAYTN, ZETTABLOCK, HARMONY,ron) |
-| token | string | 否 | 代币地址（不传则为全币种） |
-| userId | long | 是 | 用户ID |
-| direction | string | 否 | 方向 (FRONT/BACK)，默认 BACK |
-
-**请求示例**:
-
-```python
-import requests
-
-def get_address_risk():
-    url = "http://kyt-web-app.kyt-beosin-saas-test:10206/kyt-platform/internal/agent/address/risk"
-    payload = {
-        "address": "TDTAhGTEBHzX2SKVgz96XatVM3SBEWwW17",
-        "platform": "TRON",
-        "token": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-        "userId": 1697507717255766016
-    }
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers, timeout=120)
-    return response.json()
-
-result = get_address_risk()
-print(result)
+# 或者克隆到你喜欢的目录
+cd ~/workspace
+git clone https://github.com/obra/superpowers.git
 ```
 
-**响应参数**:
+### 方式二：下载 ZIP 包
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| success | boolean | 请求是否成功 |
-| code | int | 状态码 |
-| data | object | 风险评估结果 |
-| data.totalScore | double | 总风险评分 (0-100) |
-| data.totalRiskLevel | string | 总风险等级 (HIGH_RISK/MEDIUM_RISK/LOW_RISK/SAFE) |
-| data.entityRisk | object | 实体风险信息 |
-| data.identityRisks | array | 标签风险命中列表 |
-| data.behaviorRisk | object | 行为风险信息 |
-| data.inflowStrategies | array | 入账方向命中策略列表 |
-| data.outflowStrategies | array | 出账方向命中策略列表 |
-| data.topologyTooLarge | boolean | 拓扑图是否过大（超过500个点） |
-| data.points | array | 拓扑图节点列表 |
-| data.lines | array | 拓扑图连线列表 |
+```bash
+# 下载最新版本
+curl -L https://github.com/obra/superpowers/archive/refs/heads/main.zip -o superpowers.zip
 
-**响应示例**:
+# 解压
+unzip superpowers.zip
+```
 
-```json
-{
-  "success": true,
-  "code": 200,
-  "message": "success",
-  "data": {
-    "totalScore": 85.5,
-    "totalRiskLevel": "HIGH_RISK",
-    "entityRisk": {
-      "isMixing": false,
-      "isFinCEN": false,
-      "isDarkWeb": false,
-      "isGambling": false,
-      "isHacked": false,
-      "isSuspicious": true
-    },
-    "identityRisks": [
-      {
-        "tagType": "EXCHANGE",
-        "riskType": "MEDIUM_RISK",
-        "tagName": "Binance"
-      }
-    ],
-    "behaviorRisk": {
-      "normalTxCount": 150,
-      "suspiciousTxCount": 3,
-      "riskTxCount": 1
-    },
-    "inflowStrategies": [
-      {
-        "strategyName": "大额入金",
-        "score": 20.5,
-        "tag": {"name": "大额"}
-      }
-    ],
-    "outflowStrategies": [],
-    "topologyTooLarge": false,
-    "points": [
-      {
-        "id": "node_1",
-        "address": "TDTAhGTEBHzX2SKVgz96XatVM3SBEWwW17",
-        "platform": "TRON",
-        "depth": 0,
-        "iniPoint": true
-      }
-    ],
-    "lines": []
-  }
-}
+### 验证下载
+
+确保以下目录存在：
+
+```
+superpowers/
+├── skills/                    # 技能目录
+│   ├── brainstorming/
+│   ├── dispatching-parallel-agents/
+│   ├── executing-plans/
+│   ├── finishing-a-development-branch/
+│   ├── receiving-code-review/
+│   ├── requesting-code-review/
+│   ├── subagent-driven-development/
+│   ├── systematic-debugging/
+│   ├── test-driven-development/
+│   ├── using-superpowers/
+│   ├── verification-before-completion/
+│   ├── writing-plans/
+│   └── writing-skills/
+└── agents/                    # 代理配置目录
+    └── code-reviewer.md
 ```
 
 ---
 
-### 接口 2: 交易风险评分
+## 2. 复制 Skills 到 Trae
 
-**路径**: POST `/kyt-platform/internal/agent/currency/risk`
+### 目标目录
 
-**说明**: 获取指定交易的风险评分结果
+Trae 的技能目录位于：
 
-**请求参数**:
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| platform | string | 是 | 链平台 (ETH, BSC, TRON, MATIC, ARBITRUM, OPTIMISM, AVAX, SOL, LINEA, BASE, SCROLL, ZKSYNC, GNOSIS, KLAYTN, ZETTABLOCK, HARMONY, ron) |
-| hash | string | 是 | 交易哈希 |
-| direction | string | 否 | 方向 (FRONT/BACK)，默认 BACK |
-| token | string | 否 | 代币地址 |
-| currencyPlatform | string | 否 | 代币链平台 |
-| userId | long | 是 | 用户ID |
-
-**请求示例**:
-
-```python
-import requests
-
-def get_currency_risk():
-    url = "http://kyt-web-app.kyt-beosin-saas-test:10206/kyt-platform/internal/agent/currency/risk"
-    payload = {
-        "platform": "ETH",
-        "hash": "0xd0ee377f3dad7e0157920fe0cd05adc5a23cc3ded1c2b35969b5149148b6ac92",
-        "direction": "FRONT",
-        "userId": 1697507717255766016
-    }
-    headers = {"Content-Type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers, timeout=120)
-    return response.json()
-
-result = get_currency_risk()
-print(result)
+```
+~/.trae_cn/skills/
 ```
 
-**响应参数**:
+### 复制步骤
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| success | boolean | 请求是否成功 |
-| code | int | 状态码 |
-| data | object | 交易风险评估结果 |
-| data.totalScore | double | 总风险评分 (0-100) |
-| data.totalRiskLevel | string | 总风险等级 (HIGH_RISK/MEDIUM_RISK/LOW_RISK/SAFE) |
-| data.entityRisk | object | 实体风险信息 |
-| data.identityRisks | array | 标签风险命中列表 |
-| data.behaviorRisk | object | 行为风险信息 |
-| data.strategies | array | 命中策略列表 |
+```bash
+# 创建目标目录（如果不存在）
+mkdir -p ~/.trae_cn/skills
 
-**响应示例**:
+# 复制所有技能
+cp -r superpowers/skills/* ~/.trae_cn/skills/
 
-```json
-{
-  "success": true,
-  "code": 200,
-  "message": "success",
-  "data": {
-    "totalScore": 62.3,
-    "totalRiskLevel": "MEDIUM_RISK",
-    "entityRisk": {
-      "isMixing": false,
-      "isFinCEN": false,
-      "isDarkWeb": false,
-      "isGambling": false,
-      "isHacked": false,
-      "isSuspicious": false
-    },
-    "identityRisks": [
-      {
-        "tagType": "EXCHANGE",
-        "riskType": "LOW_RISK",
-        "tagName": "Coinbase"
-      }
-    ],
-    "behaviorRisk": {
-      "normalTxCount": 45,
-      "suspiciousTxCount": 1,
-      "riskTxCount": 0
-    },
-    "strategies": [
-      {
-        "strategyName": "可疑时间交易",
-        "score": 15.0,
-        "tag": {"name": "可疑"}
-      }
-    ]
-  }
-}
+# 验证复制结果
+ls -la ~/.trae_cn/skills/
+```
+
+### 需要复制的核心技能
+
+以下是 Superpowers 的核心技能列表：
+
+| 技能名称 | 用途 | 优先级 |
+|---------|------|--------|
+| `using-superpowers` | 技能系统入口，必须在每个会话开始时调用 | 最高 |
+| `brainstorming` | 创意设计，在任何编码工作前进行需求探索 | 高 |
+| `writing-plans` | 编写详细的实施计划 | 高 |
+| `subagent-driven-development` | 子代理驱动开发流程 | 高 |
+| `executing-plans` | 执行实施计划 | 高 |
+| `test-driven-development` | 测试驱动开发（TDD） | 高 |
+| `systematic-debugging` | 系统化调试流程 | 高 |
+| `requesting-code-review` | 请求代码审查 | 中 |
+| `receiving-code-review` | 接收代码审查反馈 | 中 |
+| `finishing-a-development-branch` | 完成开发分支的合并流程 | 中 |
+| `verification-before-completion` | 完成前验证 | 中 |
+| `dispatching-parallel-agents` | 并行代理调度 | 中 |
+| `writing-skills` | 创建新技能 | 低 |
+
+### 技能文件结构
+
+每个技能目录包含：
+
+```
+skill-name/
+├── SKILL.md              # 主技能文件（必需）
+├── *.md                  # 辅助文档和提示词模板
+└── scripts/              # 可选的脚本文件
 ```
 
 ---
 
-## 完整 Python 调用示例
+## 3. 创建 SubAgents
 
-```python
-import requests
-from typing import Optional, Dict, Any
+Superpowers 的 `subagent-driven-development` 技能需要三个专门的子代理。以下是在 Trae 中创建这些代理的详细配置。
 
-class KytPlatformClient:
-    """KYT Platform API 客户端"""
+### 3.1 Spec Reviewer Agent
 
-    def __init__(self, base_url: str = "http://kyt-web-app.kyt-beosin-saas-test:10206", timeout: int = 120):
-        self.base_url = base_url.rstrip("/")
-        self.timeout = timeout
+**标识（ID）：** `spec-reviewer`
 
-    def get_address_risk(
-        self,
-        address: str,
-        platform: str,
-        userId: int,
-        token: Optional[str] = None,
-        direction: Optional[str] = "BACK"
-    ) -> Dict[str, Any]:
-        """
-        获取地址风险评分
+**描述（Description）：**
+```
+Review spec compliance for Task N
+```
 
-        Args:
-            address: 钱包地址
-            platform: 链平台 (ETH, BSC, TRON, MATIC, ARBITRUM, OPTIMISM, AVAX, SOL, LINEA, BASE, SCROLL, ZKSYNC, GNOSIS, KLAYTN, ZETTABLOCK, HARMONY, ron)
-            userId: 用户ID
-            token: 代币地址 (可选，不传则为全币种)
-            direction: 方向 BACK/FRONT (可选，默认 BACK)
+**提示词（Prompt）：**
 
-        Returns:
-            API 响应结果
-        """
-        url = f"{self.base_url}/kyt-platform/internal/agent/address/risk"
-        payload = {
-            "address": address,
-            "platform": platform.upper(),
-            "userId": userId,
-            "direction": direction
-        }
-        if token:
-            payload["token"] = token
+```markdown
+You are reviewing whether an implementation matches its specification.
 
-        response = requests.post(url, json=payload, timeout=self.timeout)
-        return response.json()
+## What Was Requested
 
-    def get_currency_risk(
-        self,
-        platform: str,
-        hash: str,
-        userId: int,
-        direction: Optional[str] = "BACK",
-        token: Optional[str] = None,
-        currencyPlatform: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        获取交易风险评分
+[FULL TEXT of task requirements]
 
-        Args:
-            platform: 链平台 (ETH, BSC, TRON, MATIC, ARBITRUM, OPTIMISM, AVAX, SOL, LINEA, BASE, SCROLL, ZKSYNC, GNOSIS, KLAYTN, ZETTABLOCK, HARMONY, ron)
-            hash: 交易哈希
-            userId: 用户ID
-            direction: 方向 BACK/FRONT (可选，默认 BACK)
-            token: 代币地址 (可选)
-            currencyPlatform: 代币链平台 (可选)
+## What Implementer Claims They Built
 
-        Returns:
-            API 响应结果
-        """
-        url = f"{self.base_url}/kyt-platform/internal/agent/currency/risk"
-        payload = {
-            "platform": platform.upper(),
-            "hash": hash,
-            "userId": userId,
-            "direction": direction
-        }
-        if token:
-            payload["token"] = token
-        if currencyPlatform:
-            payload["currencyPlatform"] = currencyPlatform.upper()
+[From implementer's report]
 
-        response = requests.post(url, json=payload, timeout=self.timeout)
-        return response.json()
+## CRITICAL: Do Not Trust the Report
 
+The implementer finished suspiciously quickly. Their report may be incomplete,
+inaccurate, or optimistic. You MUST verify everything independently.
 
-if __name__ == "__main__":
-    client = KytPlatformClient()
+**DO NOT:**
+- Take their word for what they implemented
+- Trust their claims about completeness
+- Accept their interpretation of requirements
 
-    # 地址风险评分示例
-    address_result = client.get_address_risk(
-        address="TDTAhGTEBHzX2SKVgz96XatVM3SBEWwW17",
-        platform="TRON",
-        userId=1697507717255766016,
-        token="TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
-    )
-    print("地址风险评分结果:")
-    print(f"  总分: {address_result.get('data', {}).get('totalScore')}")
-    print(f"  风险等级: {address_result.get('data', {}).get('totalRiskLevel')}")
+**DO:**
+- Read the actual code they wrote
+- Compare actual implementation to requirements line by line
+- Check for missing pieces they claimed to implement
+- Look for extra features they didn't mention
 
-    # 交易风险评分示例
-    tx_result = client.get_currency_risk(
-        platform="ETH",
-        hash="0xd0ee377f3dad7e0157920fe0cd05adc5a23cc3ded1c2b35969b5149148b6ac92",
-        userId=1697507717255766016,
-        direction="FRONT"
-    )
-    print("\n交易风险评分结果:")
-    print(f"  总分: {tx_result.get('data', {}).get('totalScore')}")
-    print(f"  风险等级: {tx_result.get('data', {}).get('totalRiskLevel')}")
+## Your Job
+
+Read the implementation code and verify:
+
+**Missing requirements:**
+- Did they implement everything that was requested?
+- Are there requirements they skipped or missed?
+- Did they claim something works but didn't actually implement it?
+
+**Extra/unneeded work:**
+- Did they build things that weren't requested?
+- Did they over-engineer or add unnecessary features?
+- Did they add "nice to haves" that weren't in spec?
+
+**Misunderstandings:**
+- Did they interpret requirements differently than intended?
+- Did they solve the wrong problem?
+- Did they implement the right feature but wrong way?
+
+**Verify by reading code, not by trusting report.**
+
+Report:
+- ✅ Spec compliant (if everything matches after code inspection)
+- ❌ Issues found: [list specifically what's missing or extra, with file:line references]
 ```
 
 ---
 
-## 风险等级说明
+### 3.2 Implementer Agent
 
-| 风险等级 | 分值范围 | 说明 |
-|---------|---------|------|
-| SAFE | 0-30 | 低风险，正常使用 |
-| LOW_RISK | 31-50 | 较低风险，建议关注 |
-| MEDIUM_RISK | 51-70 | 中等风险，需要注意 |
-| HIGH_RISK | 71-100 | 高风险，谨慎处理 |
+**标识（ID）：** `implementer`
+
+**描述（Description）：**
+```
+Implement Task N: [task name]
+```
+
+**提示词（Prompt）：**
+
+```markdown
+You are implementing Task N: [task name]
+
+## Task Description
+
+[FULL TEXT of task from plan - paste it here, don't make subagent read file]
+
+## Context
+
+[Scene-setting: where this fits, dependencies, architectural context]
+
+## Before You Begin
+
+If you have questions about:
+- The requirements or acceptance criteria
+- The approach or implementation strategy
+- Dependencies or assumptions
+- Anything unclear in the task description
+
+**Ask them now.** Raise any concerns before starting work.
+
+## Your Job
+
+Once you're clear on requirements:
+1. Implement exactly what the task specifies
+2. Write tests (following TDD if task says to)
+3. Verify implementation works
+4. Commit your work
+5. Self-review (see below)
+6. Report back
+
+Work from: [directory]
+
+**While you work:** If you encounter something unexpected or unclear, **ask questions**.
+It's always OK to pause and clarify. Don't guess or make assumptions.
+
+## Code Organization
+
+You reason best about code you can hold in context at once, and your edits are more
+reliable when files are focused. Keep this in mind:
+- Follow the file structure defined in the plan
+- Each file should have one clear responsibility with a well-defined interface
+- If a file you're creating is growing beyond the plan's intent, stop and report
+  it as DONE_WITH_CONCERNS — don't split files on your own without plan guidance
+- If an existing file you're modifying is already large or tangled, work carefully
+  and note it as a concern in your report
+- In existing codebases, follow established patterns. Improve code you're touching
+  the way a good developer would, but don't restructure things outside your task.
+
+## When You're in Over Your Head
+
+It is always OK to stop and say "this is too hard for me." Bad work is worse than
+no work. You will not be penalized for escalating.
+
+**STOP and escalate when:**
+- The task requires architectural decisions with multiple valid approaches
+- You need to understand code beyond what was provided and can't find clarity
+- You feel uncertain about whether your approach is correct
+- The task involves restructuring existing code in ways the plan didn't anticipate
+- You've been reading file after file trying to understand the system without progress
+
+**How to escalate:** Report back with status BLOCKED or NEEDS_CONTEXT. Describe
+specifically what you're stuck on, what you've tried, and what kind of help you need.
+The controller can provide more context, re-dispatch with a more capable model,
+or break the task into smaller pieces.
+
+## Before Reporting Back: Self-Review
+
+Review your work with fresh eyes. Ask yourself:
+
+**Completeness:**
+- Did I fully implement everything in the spec?
+- Did I miss any requirements?
+- Are there edge cases I didn't handle?
+
+**Quality:**
+- Is this my best work?
+- Are names clear and accurate (match what things do, not how they work)?
+- Is the code clean and maintainable?
+
+**Discipline:**
+- Did I avoid overbuilding (YAGNI)?
+- Did I only build what was requested?
+- Did I follow existing patterns in the codebase?
+
+**Testing:**
+- Do tests actually verify behavior (not just mock behavior)?
+- Did I follow TDD if required?
+- Are tests comprehensive?
+
+If you find issues during self-review, fix them now before reporting.
+
+## Report Format
+
+When done, report:
+- **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+- What you implemented (or what you attempted, if blocked)
+- What you tested and test results
+- Files changed
+- Self-review findings (if any)
+- Any issues or concerns
+
+Use DONE_WITH_CONCERNS if you completed the work but have doubts about correctness.
+Use BLOCKED if you cannot complete the task. Use NEEDS_CONTEXT if you need
+information that wasn't provided. Never silently produce work you're unsure about.
+```
 
 ---
 
-## 注意事项
+### 3.3 Code Quality Reviewer Agent
 
-1. **超时设置**: 建议设置 120 秒超时，因为风险分析可能需要较长时间
+**标识（ID）：** `code-quality-reviewer`
 
-2. **平台枚举值**:
-   - ETH, BSC, TRON, MATIC
-   - ARBITRUM, OPTIMISM, AVAX, SOL
-   - LINEA, BASE, SCROLL, ZKSYNC
-   - GNOSIS, KLAYTN, ZETTABLOCK, HARMONY, RON
+**描述（Description）：**
+```
+Use this agent after spec compliance review has passed, to verify that the implemented code is well-built, clean, tested, and maintainable.
+```
 
-3. **方向说明**:
-   - BACK: 出账方向（从目标地址向外）
-   - FRONT: 入账方向（向目标地址）
+**提示词（Prompt）：**
 
-4. **错误码**: 失败时返回 `success: false`，错误信息在 `message` 字段中
+```markdown
+You are a Senior Code Reviewer with expertise in software architecture, design patterns, and best practices. Your role is to review completed project steps against original plans and ensure code quality standards are met.
+
+When reviewing completed work, you will:
+
+1. **Plan Alignment Analysis**:
+   - Compare the implementation against the original planning document or step description
+   - Identify any deviations from the planned approach, architecture, or requirements
+   - Assess whether deviations are justified improvements or problematic departures
+   - Verify that all planned functionality has been implemented
+
+2. **Code Quality Assessment**:
+   - Review code for adherence to established patterns and conventions
+   - Check for proper error handling, type safety, and defensive programming
+   - Evaluate code organization, naming conventions, and maintainability
+   - Assess test coverage and quality of test implementations
+   - Look for potential security vulnerabilities or performance issues
+
+3. **Architecture and Design Review**:
+   - Ensure the implementation follows SOLID principles and established architectural patterns
+   - Check for proper separation of concerns and loose coupling
+   - Verify that the code integrates well with existing systems
+   - Assess scalability and extensibility considerations
+
+4. **Documentation and Standards**:
+   - Verify that code includes appropriate comments and documentation
+   - Check that file headers, function documentation, and inline comments are present and accurate
+   - Ensure adherence to project-specific coding standards and conventions
+
+5. **Issue Identification and Recommendations**:
+   - Clearly categorize issues as: Critical (must fix), Important (should fix), or Suggestions (nice to have)
+   - For each issue, provide specific examples and actionable recommendations
+   - When you identify plan deviations, explain whether they're problematic or beneficial
+   - Suggest specific improvements with code examples when helpful
+
+6. **Communication Protocol**:
+   - If you find significant deviations from the plan, ask the coding agent to review and confirm the changes
+   - If you identify issues with the original plan itself, recommend plan updates
+   - For implementation problems, provide clear guidance on fixes needed
+   - Always acknowledge what was done well before highlighting issues
+
+**Additional Checks for Subagent-Driven Development:**
+- Does each file have one clear responsibility with a well-defined interface?
+- Are units decomposed so they can be understood and tested independently?
+- Is the implementation following the file structure from the plan?
+- Did this implementation create new files that are already large, or significantly grow existing files?
+
+Your output should be structured, actionable, and focused on helping maintain high code quality while ensuring project goals are met. Be thorough but concise, and always provide constructive feedback that helps improve both the current implementation and future development practices.
+
+**Return Format:**
+- Strengths: [what was done well]
+- Issues (Critical/Important/Minor): [specific issues with file:line references]
+- Assessment: [overall evaluation and recommendation]
+```
+
+---
+
+### 3.4 授权给 SoloCoder
+
+在 Trae 中，需要将这三个子代理授权给默认的 SoloCoder 代理调用。
+
+**注意：此操作只能通过 Trae 的界面进行，无法通过配置文件完成。**
+
+#### 操作步骤
+
+1. 打开 Trae IDE
+2. 进入代理管理界面（通常在设置或偏好设置中）
+3. 找到 SoloCoder 代理配置
+4. 在"允许调用的子代理"（Allowed Subagents）设置中，添加以下三个代理：
+   - `spec-reviewer`
+   - `implementer`
+   - `code-quality-reviewer`
+5. 保存配置
+
+#### 授权后的工作流程
+
+授权完成后，SoloCoder 将能够：
+
+1. **spec-reviewer**: 验证实现是否符合规格说明
+2. **implementer**: 执行具体的实施任务
+3. **code-quality-reviewer**: 审查代码质量
+
+在执行计划时，SoloCoder 会按照 subagent-driven-development 工作流程：
+- 为每个任务派发 implementer
+- 实现完成后，派发 spec-reviewer 验证规格合规性
+- 规格合规通过后，派发 code-quality-reviewer
+- 循环迭代直到所有审查通过
+
+---
+
+## 4. 配置默认提示词
+
+为了让 `using-superpowers` 技能在每个会话开始时自动激活，需要进行以下配置。
+
+### 4.1 配置会话启动提示
+
+在项目根目录创建 `.trae/rules/project_rules.md`：
+
+```markdown
+# Project Rules
+
+## Mandatory Skill Invocation
+
+At the start of every session, invoke the `using-superpowers` skill:
+
+```
+Skill tool with name: "using-superpowers"
+```
+
+This ensures all Superpowers workflows are available and properly initialized.
+```
+
+### 4.2 验证配置
+
+启动一个新的 Trae 会话，验证：
+
+1. 技能是否正确加载：
+   ```
+   检查 ~/.trae_cn/skills/using-superpowers/SKILL.md 是否存在
+   ```
+
+2. 子代理是否可用：
+   ```
+   检查是否能调用 spec-reviewer, implementer, code-quality-reviewer
+   ```
+
+3. 会话启动时是否自动提示：
+   ```
+   新会话开始时，应该看到关于 using-superpowers 的提示
+   ```
+
+---
+
+## 完整集成验证清单
+
+- [ ] Superpowers 源码已下载到本地
+- [ ] 所有技能已复制到 `~/.trae_cn/skills/`
+- [ ] `spec-reviewer` 子代理已创建
+- [ ] `implementer` 子代理已创建
+- [ ] `code-quality-reviewer` 子代理已创建
+- [ ] SoloCoder 已授权调用这三个子代理
+- [ ] 会话启动提示已配置
+- [ ] 新会话测试成功
+
+---
+
+## 常见问题
+
+### Q: 技能没有被识别怎么办？
+
+A: 检查技能文件结构是否正确：
+- 每个技能目录必须包含 `SKILL.md` 文件
+- `SKILL.md` 文件开头必须有 YAML frontmatter，包含 `name` 和 `description`
+
+### Q: 子代理无法调用怎么办？
+
+A: 确认：
+1. 子代理配置文件格式正确
+2. SoloCoder 的 `allowed_subagents` 列表包含了这些代理
+3. 代理的标识符（ID）与配置中一致
+
+### Q: 会话启动时没有自动提示？
+
+A: 检查：
+1. 配置文件路径是否正确
+2. 配置文件格式是否符合 Trae 的要求
+3. 尝试重启 Trae IDE
+
+---
+
+## 参考资源
+
+- [Superpowers GitHub 仓库](https://github.com/obra/superpowers)
+- [Superpowers 中文指南](./SUPERPOWERS-GUIDE-CN.md)
+- [Subagent-Driven Development 技能文档](../../skills/subagent-driven-development/SKILL.md)
+- [Using Superpowers 技能文档](../../skills/using-superpowers/SKILL.md)
