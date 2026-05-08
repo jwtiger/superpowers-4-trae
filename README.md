@@ -1,2 +1,2 @@
-[Superpowers 中文指南](./SUPERPOWERS-GUIDE-CN.md)
-[Superpowers 在Trae集成的具体步骤](./INTEGRATION-TRAE-CN.md)
+- [Superpowers 中文指南](./SUPERPOWERS-GUIDE-CN.md)
+- [Superpowers 在Trae集成的具体步骤](./INTEGRATION-TRAE-CN.md)
